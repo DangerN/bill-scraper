@@ -2,6 +2,15 @@ require('dotenv').config();
 const fs = require('fs').promises;
 const {Builder, By, Key, until} = require('selenium-webdriver');
 
+const validate = ({number, balance, due_date}) => {
+  return new Promise(function(resolve, reject) {
+    /^\w\d{9}/.exec(number) || reject('Invalid account number');
+    /^\$.+\.\d\d$/.exec(balance) || reject('Invalid balance');
+    /\d{2}\/\d{2}\/\d{4}/.exec(due_date) || reject('Invalid due date')
+    resolve()
+  });
+};
+
 (async () => {
   let accInfo = {};
   let driver = await new Builder().forBrowser('chrome').build();
@@ -20,9 +29,13 @@ const {Builder, By, Key, until} = require('selenium-webdriver');
     accInfo.number = await detailList[0].getText();
     accInfo.balance = await detailList[1].getText();
     accInfo.due_date = await detailList[5].getText();
+    accInfo.obtained = new Date()
+    await validate(accInfo)
     await fs.writeFile('accInfo.json', JSON.stringify(accInfo));
     await driver.findElement(By.css('#logoutForm > button')).click();
     await driver.wait(until.elementLocated(By.id('username')));
+  } catch (err) {
+    console.log(err);
   } finally {
     await driver.quit();
   }
